@@ -9,11 +9,7 @@ import (
 	"rpc"
 )
 
-var ErrDone os.Error = error("End of stream")
-
-type error string
-
-func (e error) String() string { return string(e) }
+var ErrDone = os.NewError("End of stream")
 
 type Producer func(work chan<- interface{}) os.Error
 

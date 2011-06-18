@@ -4,19 +4,21 @@ import (
 	"log"
 	"os"
 	"rpc"
+	"time"
 )
 
 func runProducer(pFunc Producer) {
 	masterHello(Kind_Producer)
 	p := &producer{work: make(chan interface{})}
+	rpc.RegisterName("Producer", p)
 	go func() {
 		err := pFunc(p.work)
 		if err != nil {
 			log.Fatal("Producer error:", err)
 		}
 		log.Print("Producer exited cleanly")
+		masterGoodbye(Kind_Producer)
 	}()
-	rpc.RegisterName("Producer", p)
 }
 
 type producer struct {
@@ -29,4 +31,13 @@ func (p *producer) GetWork(args *Empty, reply *interface{}) os.Error {
 		return nil
 	}
 	return ErrDone
+}
+
+func (p *producer) Shutdown(args *Empty, reply *Empty) os.Error {
+	go func() {
+		time.Sleep(1e9)
+		log.Print("Shutting down")
+		os.Exit(0)
+	}()
+	return nil
 }

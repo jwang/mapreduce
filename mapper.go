@@ -2,6 +2,7 @@ package mapreduce
 
 import (
 	"log"
+	"os"
 	"rpc"
 )
 
@@ -26,10 +27,10 @@ func mapLoop(producer, reducer string, mFunc Mapper) {
 	var calls []*rpc.Call
 	for {
 		var w interface{}
-		err := cp.Call("Producer.GetWork", &Empty{}, &w)
-		if err == ErrDone {
-			break
-		} else if err != nil {
+		if err := cp.Call("Producer.GetWork", &Empty{}, &w); err != nil {
+			if err.String() == ErrDone.String() {
+				break
+			}
 			log.Fatal("Producer.GetWork:", err)
 		}
 		r, err := mFunc(w)
@@ -42,5 +43,7 @@ func mapLoop(producer, reducer string, mFunc Mapper) {
 	for _, c := range calls {
 		<-c.Done
 	}
-	log.Print("Mapper exited cleanly")
+	masterGoodbye(Kind_Mapper)
+	log.Print("Mapper exited cleanly; shutting down")
+	os.Exit(0)
 }
