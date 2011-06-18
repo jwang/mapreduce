@@ -8,7 +8,7 @@ import (
 )
 
 func runProducer(pFunc Producer) {
-	masterHello(Kind_Producer)
+	masterHello(Kind_Producer).Close()
 	p := &producer{work: make(chan interface{})}
 	rpc.RegisterName("Producer", p)
 	go func() {
