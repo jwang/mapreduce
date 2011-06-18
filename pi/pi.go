@@ -12,17 +12,7 @@ var n = flag.Int("n", 5000, "Number of series to calculate")
 
 func main() {
 	flag.Parse()
-	mapreduce.Run(produce(*n), mapper, reducer)
-}
-
-func produce(n int) mapreduce.Producer {
-	return func(work chan<- interface{}) os.Error {
-		for k := 0; k <= n; k++ {
-			work <- float64(k)
-		}
-		close(work)
-		return nil
-	}
+	mapreduce.Run(reducer, mapper)
 }
 
 func mapper(work interface{}) (result interface{}, err os.Error) {
@@ -35,7 +25,16 @@ func mapper(work interface{}) (result interface{}, err os.Error) {
 	return
 }
 
-func reducer(result <-chan interface{}) os.Error {
+func reducer(work chan<- interface{}, result <-chan interface{}) os.Error {
+	// generate work
+	go func() {
+		for k := 0; k <= *n; k++ {
+			work <- float64(k)
+		}
+		close(work)
+	}()
+
+	// consume results
 	var f float64
 	for r := range result {
 		v, ok := r.(float64)

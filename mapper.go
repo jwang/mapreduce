@@ -2,48 +2,41 @@ package mapreduce
 
 import (
 	"log"
-	"os"
 	"rpc"
 )
 
-func runMapper(mFunc Mapper) {
-	c := masterHello(Kind_Mapper)
-	defer c.Close()
-	p, r := masterLookup(c, Kind_Producer), masterLookup(c, Kind_Reducer)
-	go mapLoop(p, r, mFunc)
-}
+type e struct{}
 
-func mapLoop(producer, reducer string, mFunc Mapper) {
-	cp, err := rpc.DialHTTP("tcp", producer)
+func runMapper(reducer string, mFunc Mapper) {
+	c, err := rpc.DialHTTP("tcp", reducer)
 	if err != nil {
-		log.Fatal("Connecting to Producer:", err)
+		log.Fatal("Connecting to Reducer: ", err)
 	}
-	defer cp.Close()
-	cr, err := rpc.DialHTTP("tcp", reducer)
-	if err != nil {
-		log.Fatal("Connecting to Reducer:", err)
+	defer c.Close()
+	if err := c.Call("Reducer.Hello", &e{}, &e{}); err != nil {
+		log.Fatal("Reducer.Hello: ", err)
 	}
-	defer cr.Close()
 	var calls []*rpc.Call
 	for {
 		var w interface{}
-		if err := cp.Call("Producer.GetWork", &Empty{}, &w); err != nil {
+		if err := c.Call("Reducer.GetWork", &e{}, &w); err != nil {
 			if err.String() == ErrDone.String() {
 				break
 			}
-			log.Fatal("Producer.GetWork:", err)
+			log.Fatal("Reducer.GetWork: ", err)
 		}
 		r, err := mFunc(w)
 		if err != nil {
-			log.Fatal("Mapper error:", err)
+			log.Fatal("Mapper: ", err)
 		}
-		c := cr.Go("Reducer.SendResult", &r, &Empty{}, nil)
-		calls = append(calls, c)
+		call := c.Go("Reducer.SendResult", &r, &e{}, nil)
+		calls = append(calls, call)
 	}
-	for _, c := range calls {
-		<-c.Done
+	for _, call := range calls {
+		<-call.Done
 	}
-	masterGoodbye(Kind_Mapper)
+	if err := c.Call("Reducer.Goodbye", &e{}, &e{}); err != nil {
+		log.Fatal("Reducer.Goodbye: ", err)
+	}
 	log.Print("Mapper exited cleanly; shutting down")
-	os.Exit(0)
 }
