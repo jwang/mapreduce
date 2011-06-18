@@ -1,0 +1,13 @@
+To run this demo on a single machine, run these commands in order:
+
+pi -http=127.0.0.1:9000 &
+sleep 1
+pi -produce -master=127.0.0.1:9000 &
+pi -reduce -master=127.0.0.1:9000 &
+sleep 1
+pi -map -master=127.0.0.1:9000 &
+pi -map -master=127.0.0.1:9000 &
+pi -map -master=127.0.0.1:9000 &
+pi -map -master=127.0.0.1:9000 &
+
+
