@@ -48,7 +48,6 @@ func Run(p Producer, m Mapper, r Reducer) {
 		log.Println("Acting as Master")
 		runMaster()
 	}
-	log.Println("Staring HTTP-RPC server")
 	rpc.HandleHTTP()
 	err = http.Serve(l, nil)
 	if err != nil {
